@@ -346,7 +346,7 @@ public class SvgParser {
         frm.add(pnl);
         frm.setSize(550,900);
         frm.setVisible(true);
-        frm.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frm.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
     }
 
     private static void PPCApp() {
@@ -371,7 +371,7 @@ public class SvgParser {
         frm.add(pnl);
         frm.setSize(400,300);
         frm.setVisible(true);
-        frm.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frm.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         getEPC();
     }
 
@@ -380,7 +380,6 @@ public class SvgParser {
         MongoDatabase database = client.getDatabase("ppc");
         MongoCursor<String> curs = database.getCollection("bills").distinct("epc", String.class).iterator();
         while (curs.hasNext()){
-            //System.out.println(curs.next());
             cbEPC.addItem(curs.next());
         }
     }
@@ -391,8 +390,7 @@ public class SvgParser {
         MongoDatabase database = client.getDatabase("ppc");
         MongoCursor<Document> curs = database.getCollection("bills").find(new Document("epc", epc)).sort(new Document("lixi","1")).iterator();
         while (curs.hasNext()){
-            //System.out.println(curs.next());
-            cbEPC.addItem(curs.next().get("lixi").toString());
+            cbEPC.addItem((String)curs.next().get("lixi"));
         }
     }
 
