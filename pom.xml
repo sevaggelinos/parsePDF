@@ -33,6 +33,11 @@
             <artifactId>oracle</artifactId>
             <version>11.2.0.4</version>
         </dependency>
+        <dependency>
+            <groupId>org.jdatepicker</groupId>
+            <artifactId>jdatepicker</artifactId>
+            <version>1.3.4</version>
+        </dependency>
     </dependencies>
 
 

@@ -18,5 +18,6 @@
     <orderEntry type="library" name="Maven: org.mongodb:mongodb-driver-core:3.0.0-rc0" level="project" />
     <orderEntry type="library" name="Maven: org.mongodb:bson:3.0.0-rc0" level="project" />
     <orderEntry type="library" name="Maven: com.oracle:oracle:11.2.0.4" level="project" />
+    <orderEntry type="library" name="Maven: org.jdatepicker:jdatepicker:1.3.4" level="project" />
   </component>
 </module>

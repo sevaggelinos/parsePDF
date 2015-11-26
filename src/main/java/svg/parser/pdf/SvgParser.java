@@ -1,6 +1,5 @@
 package svg.parser.pdf;
 
-import com.mongodb.BasicDBObject;
 import com.mongodb.MongoClient;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoCursor;
@@ -9,8 +8,15 @@ import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.text.PDFTextStripperByArea;
 import org.bson.Document;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import org.jdatepicker.impl.JDatePanelImpl;
+import org.jdatepicker.impl.JDatePickerImpl;
+import org.jdatepicker.impl.UtilDateModel;
 
 import javax.swing.*;
+import javax.swing.border.TitledBorder;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
 import java.awt.datatransfer.Clipboard;
@@ -22,18 +28,32 @@ import java.awt.event.MouseListener;
 import java.io.File;
 import java.io.IOException;
 import java.sql.*;
+import java.util.Properties;
 
 public class SvgParser {
     public static String JSON_OUTPUT;
+    public static int DAYS_CALC;
+    public static int DAY_CONS;
+    public static int NIGHT_CONS;
     public static JComboBox cbEPC;
     public static JComboBox cbLixi;
+    public static JComboBox cbKeys;
+    public static JTextField txtAmtResult;
+    public static JDatePickerImpl datePicker;
+    public static JLabel lblInvoice;
+    public static JLabel lblLixi;
+    public static JLabel lblEnanti;
+    public static JLabel lblDCons;
+    public static JLabel lblNCons;
+    public static JLabel lblNextCount;
+    public static JButton btnCalc;
     private SvgParser() {
         //utility class and should not be constructed.
     }
 
     public static void main(String[] args) throws IOException {
         if (args.length < 1) {
-            usage();
+            PPCApp();//usage();
         } else {
             File file = new File(args[0]);
             if (args[0].toUpperCase().endsWith(".PDF")){
@@ -97,6 +117,9 @@ public class SvgParser {
         Rectangle rectnextCnt = new Rectangle(450, 200, 180, 15);
         String nextcnt = get_rect_char(filename, 0, rectnextCnt);
 
+        String nextcntrd = nextcnt.substring(6,10)+"-"+nextcnt.substring(3,5)+"-"+nextcnt.substring(0,2)+"T"+"00:00:00.000Z";
+
+
         Rectangle rectAdr1 = new Rectangle(275, 200, 180, 15);
         String adr1 = get_rect_char(filename, 0, rectAdr1);
 
@@ -107,7 +130,8 @@ public class SvgParser {
         String amt = get_rect_char(filename, 0, rectAmt);
 
         Rectangle rectLixi = new Rectangle(130, 220, 100, 20);
-        String lixi = get_rect_char(filename, 0, rectLixi);
+        String lixi = get_rect_char(filename, 0, rectLixi).trim();
+        String lixiord = lixi.substring(6,10)+"-"+lixi.substring(3,5)+"-"+lixi.substring(0,2)+"T"+"00:00:00.000Z";
 
         Rectangle rectConsFrom = new Rectangle(135, 260, 70, 15);
         String consFrom = get_rect_char(filename, 0, rectConsFrom).replace(".","").trim();
@@ -190,39 +214,6 @@ public class SvgParser {
 
         Rectangle rectKWHnightDtls = new Rectangle(300, 100, 300, 10);
         String KWHnightDtls = get_rect_char(filename, 1, rectKWHnightDtls).replace(".","").trim();
-/*
-        System.out.println(invoicetype);
-        System.out.println(custname);
-        System.out.println(custaddress1 + " " + custaddress2);
-        System.out.println(epc);
-        System.out.println(adr1 + " " + adr2);
-        System.out.println(nextcnt);
-        System.out.println(amt);
-        System.out.println(lixi);
-        System.out.println(contractNumber);
-        System.out.println(consFrom +" - " + consTo);
-
-        System.out.println(days);
-        System.out.println(consume);
-        System.out.println(issuedate);
-        System.out.println(accNumber);
-        System.out.println(customer);
-        System.out.println(invoice);
-        System.out.println(tin);
-        System.out.println(ppcAmt);
-        System.out.println(regulatedAmt);
-        System.out.println(enanti);
-        System.out.println(miscAmt);
-        System.out.println(vatAmt);
-        System.out.println(ertAmt);
-        System.out.println(unpayedAmt);
-        System.out.println(KWHDayLast);
-        System.out.println(KWHDayBefore);
-        System.out.println(KWHDayCons);
-        System.out.println(KWHNightLast);
-        System.out.println(KWHNightBefore);
-        System.out.println(KWHNightCons);
-*/
 
         JSON_OUTPUT = "{"+"\n" +
                       "\"invoicetype\":\""+invoicetype+"\",\n" +
@@ -230,9 +221,11 @@ public class SvgParser {
                       "\"custaddress\":\""+custaddress1 + " " + custaddress2+"\",\n" +
                       "\"epc\":\""+epc+"\",\n" +
                       "\"building\":\""+adr1 + " " + adr2+"\",\n" +
-                      "\"nextcnt\":\""+nextcnt+"\",\n" +
+                      "\"nextcnt\": \""+nextcnt+"\",\n" +
+                      "\"nextcntrd\": \""+nextcntrd+"\",\n" +
                       "\"amt\":\""+amt+"\",\n" +
                       "\"lixi\":\""+lixi+"\",\n" +
+                      "\"lixiord\":\""+lixiord+"\",\n" +
                       "\"contractNumber\":\""+contractNumber+"\",\n" +
                       "\"consPeriod\":\""+consFrom +" - " + consTo+"\",\n" +
                       "\"days\":\""+days+"\",\n" +
@@ -351,12 +344,12 @@ public class SvgParser {
 
     private static void PPCApp() {
         JFrame frm = new JFrame("P.P.C. Invoices ");
-        JPanel pnl = new JPanel();
-        pnl.setLayout(null);
+        JPanel pnlMngData = new JPanel();
+        pnlMngData.setLayout(null);
         cbEPC = new JComboBox();
-        cbEPC.setLocation(10,10);
+        cbEPC.setLocation(10,15);
         cbEPC.setSize(200,20);
-        pnl.add(cbEPC);
+        pnlMngData.add(cbEPC);
 
         cbEPC.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
@@ -365,14 +358,205 @@ public class SvgParser {
         });
 
         cbLixi = new JComboBox();
-        cbLixi.setLocation(10,35);
+        cbLixi.setLocation(10,40);
         cbLixi.setSize(100,20);
-        pnl.add(cbLixi);
-        frm.add(pnl);
-        frm.setSize(400,300);
+        pnlMngData.add(cbLixi);
+
+
+        cbKeys = new JComboBox();
+        cbKeys.setLocation(10,65);
+        cbKeys.setSize(200,20);
+        pnlMngData.add(cbKeys);
+        getBillKeys();
+
+        cbLixi.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                getEPCRes(cbEPC.getSelectedItem().toString(), cbLixi.getSelectedItem().toString(), cbKeys.getSelectedItem().toString());
+            }
+        });
+
+        cbKeys.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                getEPCRes(cbEPC.getSelectedItem().toString(), cbLixi.getSelectedItem().toString(), cbKeys.getSelectedItem().toString());
+            }
+        });
+
+
+        txtAmtResult = new JTextField();
+        txtAmtResult.setLocation(220, 65);
+        txtAmtResult.setSize(200, 20);
+        pnlMngData.add(txtAmtResult);
+        pnlMngData.setSize(440, 95);
+        pnlMngData.setLocation(10, 10);
+        TitledBorder brdMngData;
+        brdMngData = BorderFactory.createTitledBorder("Mongo Data");
+        pnlMngData.setBorder(brdMngData);
+
+
+
+        JPanel pnlProjection = new JPanel();
+        pnlProjection.setLayout(null);
+        pnlProjection.setSize(440, 290);
+        pnlProjection.setLocation(10, 110);
+        TitledBorder brdProjection;
+        brdProjection = BorderFactory.createTitledBorder("Project Consumption");
+        pnlProjection.setBorder(brdProjection);
+
+        UtilDateModel model = new UtilDateModel();
+
+        Properties p = new Properties();
+        p.put("text.today", "Today");
+        p.put("text.month", "Month");
+        p.put("text.year", "Year");
+        JDatePanelImpl datePanel = new JDatePanelImpl(model, p);
+
+        datePicker = new JDatePickerImpl(datePanel, new DateLabelFormatter());
+        datePicker.setLocation(10,15);
+        datePicker.setSize(150,20);
+        pnlProjection.add(datePicker);
+        frm.setLayout(null);
+
+        datePicker.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                miscProjection();
+            }
+        });
+
+
+        JTextField txtDCons = new JTextField();
+        txtDCons.setLocation(10, 40);
+        txtDCons.setSize(150,20);
+        GhostText ghostTextD = new GhostText(txtDCons, "Day kWh Consumption");
+        txtDCons.setFont(new Font(null, Font.BOLD, 14));
+        pnlProjection.add(txtDCons);
+
+        JTextField txtNCons = new JTextField();
+        txtNCons.setLocation(10, 65);
+        txtNCons.setSize(150,20);
+        GhostText ghostTextN = new GhostText(txtNCons, "Night kWh Consumption");
+        txtNCons.setFont(new Font(null, Font.BOLD, 14));
+        pnlProjection.add(txtNCons);
+
+        btnCalc = new JButton("Calc");
+        btnCalc.setLocation(10, 90);
+        btnCalc.setSize(150,20);
+        btnCalc.setEnabled(false);
+        pnlProjection.add(btnCalc);
+
+        btnCalc.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                calcProjection();
+            }
+        });
+
+
+        JPanel pnlLastAcc = new JPanel();
+        pnlLastAcc.setLayout(null);
+        pnlLastAcc.setSize(180, 165);
+        pnlLastAcc.setLocation(10, 120);
+        TitledBorder brdLastAcc;
+        brdLastAcc = BorderFactory.createTitledBorder("Last Bill");
+        pnlLastAcc.setBorder(brdLastAcc);
+        pnlProjection.add(pnlLastAcc);
+        lblInvoice = new JLabel("Inv. type");
+        lblInvoice.setSize(180, 20);
+        lblInvoice.setLocation(10, 15);
+        lblInvoice.setFont(new Font(null, Font.BOLD, 14));
+        pnlLastAcc.add(lblInvoice);
+
+        lblLixi = new JLabel("Lixi Date");
+        lblLixi.setSize(180, 20);
+        lblLixi.setLocation(10, 40);
+        lblLixi.setFont(new Font(null, Font.BOLD, 14));
+        pnlLastAcc.add(lblLixi);
+
+        lblEnanti = new JLabel("Enanti");
+        lblEnanti.setSize(180, 20);
+        lblEnanti.setLocation(10, 65);
+        lblEnanti.setFont(new Font(null, Font.BOLD, 14));
+        pnlLastAcc.add(lblEnanti);
+
+        lblDCons = new JLabel("Day kWh");
+        lblDCons.setSize(180, 20);
+        lblDCons.setLocation(10, 90);
+        lblDCons.setFont(new Font(null, Font.BOLD, 14));
+        pnlLastAcc.add(lblDCons);
+
+        lblNCons = new JLabel("Night kWh");
+        lblNCons.setSize(180, 20);
+        lblNCons.setLocation(10, 115);
+        lblNCons.setFont(new Font(null, Font.BOLD, 14));
+        pnlLastAcc.add(lblNCons);
+
+        lblNextCount = new JLabel("Next Count");
+        lblNextCount.setSize(180, 20);
+        lblNextCount.setLocation(10, 140);
+        lblNextCount.setFont(new Font(null, Font.BOLD, 14));
+        pnlLastAcc.add(lblNextCount);
+
+
+
+
+        frm.add(pnlMngData);
+        frm.add(pnlProjection);
+        frm.setSize(480,450);
         frm.setVisible(true);
         frm.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         getEPC();
+    }
+
+    static void calcProjection(){
+        //int v_now_
+    }
+
+    static void miscProjection(){
+        Date selectedDate = (Date) datePicker.getModel().getValue();
+
+        DateFormat df = new SimpleDateFormat("yyyy-MM-dd 00:00:00.000Z");
+        DateFormat dfclassic = new SimpleDateFormat("dd/MM/yyyy");
+        String selectedDate_str = df.format(selectedDate);
+        MongoClient client = new MongoClient();
+        MongoDatabase database = client.getDatabase("ppc");
+        MongoCursor<Document> curs = database.getCollection("bills").find(new Document("epc", cbEPC.getSelectedItem().toString()).append("nextcntrd", new Document("$gt", selectedDate_str))).sort(new Document("lixiord", -1)).iterator();
+        while (curs.hasNext()){
+            Document doc =  curs.next();
+            if (doc.get("invoicetype").equals("емамти")) {
+                lblInvoice.setText("Inv. type:" +doc.get("invoicetype").toString());
+                lblLixi.setText("Lixi Date:" +doc.get("lixi").toString());
+                lblEnanti.setText("Enanti:" +doc.get("enanti").toString());
+                lblDCons.setText("Day kWh:" +doc.get("KWHDayBefore").toString());
+                lblNCons.setText("Night kWh:" +doc.get("KWHNightBefore").toString());
+                lblNextCount.setText("Next Count:" +doc.get("nextcnt").toString());
+
+                try {
+                    Date IssuesDt = dfclassic.parse(doc.get("issuedate").toString());
+                    System.out.println("selectedDate="+selectedDate);
+                    System.out.println("IssuesDt="+IssuesDt);
+                    if (selectedDate.compareTo(IssuesDt)>0){
+                        btnCalc.setEnabled(true);
+
+                        /**
+                         *
+                         * TODO: find three ints
+                         *
+                         * */
+                        DAYS_CALC = 1;
+                        DAY_CONS = 1;
+                        NIGHT_CONS=1;
+
+
+
+
+                    }else{
+                        btnCalc.setEnabled(false);
+                    }
+                } catch (Exception e){
+                    System.out.println(e.getMessage());
+                }
+                break;
+            }
+        }
+
     }
 
     static void getEPC() {
@@ -388,13 +572,29 @@ public class SvgParser {
         ///    db.bills.find({epc:'716050666023'},{'lixi':1})
         MongoClient client = new MongoClient();
         MongoDatabase database = client.getDatabase("ppc");
-        MongoCursor<Document> curs = database.getCollection("bills").find(new Document("epc", epc)).sort(new Document("lixi","1")).iterator();
+        MongoCursor<Document> curs = database.getCollection("bills").find(new Document("epc", epc)).sort(new Document("lixiord", 1)).iterator();
         while (curs.hasNext()){
-            cbEPC.addItem((String)curs.next().get("lixi"));
+            cbLixi.addItem(curs.next().get("lixi"));
         }
     }
 
+    static void getEPCRes(String epc, String lixi, String key) {
+        MongoClient client = new MongoClient();
+        MongoDatabase database = client.getDatabase("ppc");
+        MongoCursor<Document> curs = database.getCollection("bills").find(new Document("epc", epc).append("lixi", lixi)).iterator();
+        while (curs.hasNext()){
+            txtAmtResult.setText(curs.next().get(key).toString());
+        }
+    }
 
+    static void getBillKeys() {
+        MongoClient client = new MongoClient();
+        MongoDatabase database = client.getDatabase("ppc");
+        MongoCursor<Document> curs = database.getCollection("bills_keys").find().iterator();
+        while (curs.hasNext()){
+            cbKeys.addItem(curs.next().get("_id"));
+        }
+    }
 
     private static void putPPCinMongo(){
         MongoClient client = new MongoClient();

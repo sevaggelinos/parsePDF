@@ -3,13 +3,14 @@
     <output-path>$PROJECT_DIR$/out/artifacts/parsePDF_jar</output-path>
     <root id="archive" name="parsePDF.jar">
       <element id="module-output" name="parsePDF" />
-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/mongodb/mongodb-driver-core/3.0.0-rc0/mongodb-driver-core-3.0.0-rc0.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/mongodb/bson/3.0.0-rc0/bson-3.0.0-rc0.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/commons-logging/commons-logging/1.2/commons-logging-1.2.jar" path-in-jar="/" />
-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/apache/pdfbox/fontbox/2.0.0-SNAPSHOT/fontbox-2.0.0-20151108.195932-1877.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/apache/pdfbox/pdfbox/2.0.0-SNAPSHOT/pdfbox-2.0.0-20151123.200045-1854.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/mongodb/mongodb-driver/3.0.0-rc0/mongodb-driver-3.0.0-rc0.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/apache/pdfbox/fontbox/2.0.0-SNAPSHOT/fontbox-2.0.0-20151123.195919-1908.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/com/oracle/oracle/11.2.0.4/oracle-11.2.0.4.jar" path-in-jar="/" />
-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/apache/pdfbox/pdfbox/2.0.0-SNAPSHOT/pdfbox-2.0.0-20151108.200121-1824.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/jdatepicker/jdatepicker/1.3.4/jdatepicker-1.3.4.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/mongodb/mongodb-driver-core/3.0.0-rc0/mongodb-driver-core-3.0.0-rc0.jar" path-in-jar="/" />
     </root>
   </artifact>
 </component>
