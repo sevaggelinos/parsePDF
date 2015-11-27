@@ -33,12 +33,15 @@ import java.util.Properties;
 public class SvgParser {
     public static String JSON_OUTPUT;
     public static int DAYS_CALC;
-    public static int DAY_CONS;
-    public static int NIGHT_CONS;
+    public static int DAYS_ALL_CALC;
+    public static int DAY_ALL_CONS;
+    public static int NIGHT_ALL_CONS;
     public static JComboBox cbEPC;
     public static JComboBox cbLixi;
     public static JComboBox cbKeys;
     public static JTextField txtAmtResult;
+    public static JTextField txtDCons;
+    public static JTextField txtNCons;
     public static JDatePickerImpl datePicker;
     public static JLabel lblInvoice;
     public static JLabel lblLixi;
@@ -423,14 +426,14 @@ public class SvgParser {
         });
 
 
-        JTextField txtDCons = new JTextField();
+        txtDCons = new JTextField();
         txtDCons.setLocation(10, 40);
         txtDCons.setSize(150,20);
         GhostText ghostTextD = new GhostText(txtDCons, "Day kWh Consumption");
         txtDCons.setFont(new Font(null, Font.BOLD, 14));
         pnlProjection.add(txtDCons);
 
-        JTextField txtNCons = new JTextField();
+        txtNCons = new JTextField();
         txtNCons.setLocation(10, 65);
         txtNCons.setSize(150,20);
         GhostText ghostTextN = new GhostText(txtNCons, "Night kWh Consumption");
@@ -517,6 +520,13 @@ public class SvgParser {
         String selectedDate_str = df.format(selectedDate);
         MongoClient client = new MongoClient();
         MongoDatabase database = client.getDatabase("ppc");
+
+        String prv_cnt = null;
+        MongoCursor<Document> cursPrev = database.getCollection("bills").find(new Document("epc", cbEPC.getSelectedItem().toString()).append("nextcntrd", new Document("$lt", selectedDate_str))).sort(new Document("nextcntrd", -1)).iterator();
+        while (cursPrev.hasNext()) {
+            Document doc = cursPrev.next();
+            prv_cnt = doc.get("nextcntrd").toString();
+        }
         MongoCursor<Document> curs = database.getCollection("bills").find(new Document("epc", cbEPC.getSelectedItem().toString()).append("nextcntrd", new Document("$gt", selectedDate_str))).sort(new Document("lixiord", -1)).iterator();
         while (curs.hasNext()){
             Document doc =  curs.next();
@@ -540,10 +550,16 @@ public class SvgParser {
                          * TODO: find three ints
                          *
                          * */
-                        DAYS_CALC = 1;
-                        DAY_CONS = 1;
-                        NIGHT_CONS=1;
+                        System.out.println("prv_cnt="+prv_cnt);
+                        DAYS_CALC = df.parse(prv_cnt).compareTo(selectedDate);
+                        DAYS_ALL_CALC = df.parse(prv_cnt).compareTo(dfclassic.parse(doc.get("nextcnt").toString()));
+                        DAY_ALL_CONS = (DAYS_ALL_CALC/DAYS_CALC)*Integer.parseInt(txtDCons.getText());
+                        NIGHT_ALL_CONS=(DAYS_ALL_CALC/DAYS_CALC)*Integer.parseInt(txtNCons.getText());;
 
+                        System.out.println("DAYS_CALC="+DAYS_CALC);
+                        System.out.println("DAYS_ALL_CALC="+DAYS_ALL_CALC);
+                        System.out.println("DAY_ALL_CONS="+DAY_ALL_CONS);
+                        System.out.println("NIGHT_ALL_CONS="+NIGHT_ALL_CONS);
 
 
 
