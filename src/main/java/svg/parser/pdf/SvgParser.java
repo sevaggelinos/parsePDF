@@ -8,6 +8,9 @@ import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.text.PDFTextStripperByArea;
 import org.bson.Document;
+
+import java.io.BufferedWriter;
+import java.io.FileWriter;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -29,13 +32,21 @@ import java.io.File;
 import java.io.IOException;
 import java.sql.*;
 import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 
 public class SvgParser {
     public static String JSON_OUTPUT;
+    public static String NEXT_COUNT;
     public static int DAYS_CALC;
     public static int DAYS_ALL_CALC;
     public static int DAY_ALL_CONS;
     public static int NIGHT_ALL_CONS;
+    public static int PRV_CONSUME_D;
+    public static int PRV_CONSUME_N;
+    public static int NOW_CONSUME_D;
+    public static int NOW_CONSUME_N;
+    public static int PRJ_CONSUME_D;
+    public static int PRJ_CONSUME_N;
     public static JComboBox cbEPC;
     public static JComboBox cbLixi;
     public static JComboBox cbKeys;
@@ -50,13 +61,14 @@ public class SvgParser {
     public static JLabel lblNCons;
     public static JLabel lblNextCount;
     public static JButton btnCalc;
+    public static JTextArea txtCALC = new JTextArea();
     private SvgParser() {
         //utility class and should not be constructed.
     }
 
     public static void main(String[] args) throws IOException {
         if (args.length < 1) {
-            PPCApp();//usage();
+            usage();
         } else {
             File file = new File(args[0]);
             if (args[0].toUpperCase().endsWith(".PDF")){
@@ -413,8 +425,22 @@ public class SvgParser {
         p.put("text.year", "Year");
         JDatePanelImpl datePanel = new JDatePanelImpl(model, p);
 
+        txtDCons = new JTextField();
+        txtDCons.setLocation(10, 15);
+        txtDCons.setSize(150,20);
+        GhostText ghostTextD = new GhostText(txtDCons, "Day kWh Consumption");
+        txtDCons.setFont(new Font(null, Font.BOLD, 14));
+        pnlProjection.add(txtDCons);
+
+        txtNCons = new JTextField();
+        txtNCons.setLocation(10, 40);
+        txtNCons.setSize(150,20);
+        GhostText ghostTextN = new GhostText(txtNCons, "Night kWh Consumption");
+        txtNCons.setFont(new Font(null, Font.BOLD, 14));
+        pnlProjection.add(txtNCons);
+
         datePicker = new JDatePickerImpl(datePanel, new DateLabelFormatter());
-        datePicker.setLocation(10,15);
+        datePicker.setLocation(10,65);
         datePicker.setSize(150,20);
         pnlProjection.add(datePicker);
         frm.setLayout(null);
@@ -425,26 +451,65 @@ public class SvgParser {
             }
         });
 
+        txtCALC = new JTextArea();
+        txtCALC.setEnabled(false);
+        txtCALC.setFont(txtCALC.getFont().deriveFont(Font.BOLD));
+        txtCALC.setDisabledTextColor(Color.black);
+        //JScrollPane scroll = new JScrollPane(txtCALC);
+        JScrollPane scroll = new JScrollPane (txtCALC,
+                JScrollPane.VERTICAL_SCROLLBAR_ALWAYS, JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
+        scroll.setSize(420,190);
+        scroll.setLocation(10, 90);
+        //Add Textarea in to middle panel
+        pnlProjection.add(scroll);
 
-        txtDCons = new JTextField();
-        txtDCons.setLocation(10, 40);
-        txtDCons.setSize(150,20);
-        GhostText ghostTextD = new GhostText(txtDCons, "Day kWh Consumption");
-        txtDCons.setFont(new Font(null, Font.BOLD, 14));
-        pnlProjection.add(txtDCons);
+        txtCALC.addMouseListener(new MouseListener() {
+            public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() == 2 && !e.isConsumed()) {
+                    e.consume();
+                    //handle double click event.
+                    StringSelection stringSelection = new StringSelection(txtCALC.getText());
+                    Clipboard clpbrd = Toolkit.getDefaultToolkit().getSystemClipboard();
+                    clpbrd.setContents(stringSelection, null);
+                    txtCALC.setToolTipText("Copied to Clipboard");
+                    try {
+                        String content = txtCALC.getText();
+                        String fname = NEXT_COUNT;
+                        fname = fname.replace('/','_');
+                        Date selectedDate = (Date) datePicker.getModel().getValue();
 
-        txtNCons = new JTextField();
-        txtNCons.setLocation(10, 65);
-        txtNCons.setSize(150,20);
-        GhostText ghostTextN = new GhostText(txtNCons, "Night kWh Consumption");
-        txtNCons.setFont(new Font(null, Font.BOLD, 14));
-        pnlProjection.add(txtNCons);
+                        DateFormat df = new SimpleDateFormat("yyyy-MM-dd");
+                        String selectedDate_str = df.format(selectedDate);
+                        File file = new File("Projection_"+selectedDate_str+"_for_Lixi_"+fname+".txt");
+
+                        // if file doesnt exists, then create it
+                        if (!file.exists()) {
+                            file.createNewFile();
+                        }
+
+                        FileWriter fw = new FileWriter(file.getAbsoluteFile());
+                        BufferedWriter bw = new BufferedWriter(fw);
+                        bw.write(content);
+                        bw.close();
+                        JOptionPane.showMessageDialog(txtCALC,"File: Projection_"+selectedDate_str+"_for_Lixi_"+fname+".txt created!","File Created", JOptionPane.INFORMATION_MESSAGE);
+                    }catch (Exception ex){
+                        JOptionPane.showMessageDialog(txtCALC,"Error Creating File","ERROR", JOptionPane.ERROR_MESSAGE);
+                    }
+                    //putProjectionINMongo();
+                }
+            }
+            public void mousePressed(MouseEvent e) {}
+            public void mouseReleased(MouseEvent e) {}
+            public void mouseEntered(MouseEvent e) {}
+            public void mouseExited(MouseEvent e) {}
+        });
+
 
         btnCalc = new JButton("Calc");
         btnCalc.setLocation(10, 90);
         btnCalc.setSize(150,20);
         btnCalc.setEnabled(false);
-        pnlProjection.add(btnCalc);
+        //pnlProjection.add(btnCalc);
 
         btnCalc.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
@@ -460,7 +525,7 @@ public class SvgParser {
         TitledBorder brdLastAcc;
         brdLastAcc = BorderFactory.createTitledBorder("Last Bill");
         pnlLastAcc.setBorder(brdLastAcc);
-        pnlProjection.add(pnlLastAcc);
+        //pnlProjection.add(pnlLastAcc);
         lblInvoice = new JLabel("Inv. type");
         lblInvoice.setSize(180, 20);
         lblInvoice.setLocation(10, 15);
@@ -515,17 +580,18 @@ public class SvgParser {
     static void miscProjection(){
         Date selectedDate = (Date) datePicker.getModel().getValue();
 
-        DateFormat df = new SimpleDateFormat("yyyy-MM-dd 00:00:00.000Z");
+        DateFormat df = new SimpleDateFormat("yyyy-MM-dd");
         DateFormat dfclassic = new SimpleDateFormat("dd/MM/yyyy");
         String selectedDate_str = df.format(selectedDate);
         MongoClient client = new MongoClient();
         MongoDatabase database = client.getDatabase("ppc");
 
         String prv_cnt = null;
-        MongoCursor<Document> cursPrev = database.getCollection("bills").find(new Document("epc", cbEPC.getSelectedItem().toString()).append("nextcntrd", new Document("$lt", selectedDate_str))).sort(new Document("nextcntrd", -1)).iterator();
+        MongoCursor<Document> cursPrev = database.getCollection("bills").find(new Document("epc", cbEPC.getSelectedItem().toString()).append("nextcntrd", new Document("$lt", selectedDate_str))).sort(new Document("nextcntrd", 1)).iterator();
         while (cursPrev.hasNext()) {
             Document doc = cursPrev.next();
             prv_cnt = doc.get("nextcntrd").toString();
+
         }
         MongoCursor<Document> curs = database.getCollection("bills").find(new Document("epc", cbEPC.getSelectedItem().toString()).append("nextcntrd", new Document("$gt", selectedDate_str))).sort(new Document("lixiord", -1)).iterator();
         while (curs.hasNext()){
@@ -536,8 +602,8 @@ public class SvgParser {
                 lblEnanti.setText("Enanti:" +doc.get("enanti").toString());
                 lblDCons.setText("Day kWh:" +doc.get("KWHDayBefore").toString());
                 lblNCons.setText("Night kWh:" +doc.get("KWHNightBefore").toString());
+                NEXT_COUNT = doc.get("nextcnt").toString();
                 lblNextCount.setText("Next Count:" +doc.get("nextcnt").toString());
-
                 try {
                     Date IssuesDt = dfclassic.parse(doc.get("issuedate").toString());
                     System.out.println("selectedDate="+selectedDate);
@@ -550,24 +616,132 @@ public class SvgParser {
                          * TODO: find three ints
                          *
                          * */
-                        System.out.println("prv_cnt="+prv_cnt);
-                        DAYS_CALC = df.parse(prv_cnt).compareTo(selectedDate);
-                        DAYS_ALL_CALC = df.parse(prv_cnt).compareTo(dfclassic.parse(doc.get("nextcnt").toString()));
-                        DAY_ALL_CONS = (DAYS_ALL_CALC/DAYS_CALC)*Integer.parseInt(txtDCons.getText());
-                        NIGHT_ALL_CONS=(DAYS_ALL_CALC/DAYS_CALC)*Integer.parseInt(txtNCons.getText());;
+
+                        PRV_CONSUME_D = Integer.parseInt(doc.get("KWHDayBefore").toString());
+                        PRV_CONSUME_N = Integer.parseInt(doc.get("KWHNightBefore").toString());
+                        NOW_CONSUME_D = Integer.parseInt(txtDCons.getText());
+                        NOW_CONSUME_N = Integer.parseInt(txtNCons.getText());
+
+
+                        long diff = selectedDate.getTime() - df.parse(prv_cnt.substring(0, 10)).getTime();
+                        DAYS_CALC =  Math.toIntExact(TimeUnit.DAYS.convert(diff, TimeUnit.MILLISECONDS));
+
+                        diff = dfclassic.parse(doc.get("nextcnt").toString()).getTime() - df.parse(prv_cnt.substring(0,10)).getTime();
+                        DAYS_ALL_CALC =  Math.toIntExact(TimeUnit.DAYS.convert(diff, TimeUnit.MILLISECONDS));
 
                         System.out.println("DAYS_CALC="+DAYS_CALC);
                         System.out.println("DAYS_ALL_CALC="+DAYS_ALL_CALC);
-                        System.out.println("DAY_ALL_CONS="+DAY_ALL_CONS);
-                        System.out.println("NIGHT_ALL_CONS="+NIGHT_ALL_CONS);
 
 
+                        PRJ_CONSUME_D = (int)( (NOW_CONSUME_D-PRV_CONSUME_D) * ((double)DAYS_ALL_CALC)/((double)DAYS_CALC));
+                        PRJ_CONSUME_N = (int)( (NOW_CONSUME_N-PRV_CONSUME_N)* ((double)DAYS_ALL_CALC)/((double)DAYS_CALC));
 
+                        txtCALC.append("PREV=======================================================" + System.lineSeparator());
+                        txtCALC.append("PREV COUNT:" + prv_cnt.substring(0, 10) + System.lineSeparator());
+                        txtCALC.append("PREV COUNT_D:" + PRV_CONSUME_D + System.lineSeparator());
+                        txtCALC.append("PREV COUNT_N:" + PRV_CONSUME_N + System.lineSeparator());
+                        txtCALC.append("ENANTI:" + doc.get("enanti").toString() + System.lineSeparator());
+                        txtCALC.append("NOW========================================================" + System.lineSeparator());
+                        txtCALC.append("NOW COUNT:" + selectedDate_str + System.lineSeparator());
+                        txtCALC.append("NOW_DAYS=" + DAYS_CALC + System.lineSeparator());
+                        txtCALC.append("NOW COUNT_D:" + NOW_CONSUME_D + System.lineSeparator());
+                        txtCALC.append("NOW COUNT_N:" + NOW_CONSUME_N + System.lineSeparator());
+                        txtCALC.append("NOW CONSUMPTION_D:" + (NOW_CONSUME_D - PRV_CONSUME_D) + System.lineSeparator());
+                        txtCALC.append("NOW CONSUMPTION_N:" + (NOW_CONSUME_N - PRV_CONSUME_N) + System.lineSeparator());
+                        txtCALC.append("PROJ=======================================================" + System.lineSeparator());
+                        txtCALC.append("NEXT COUNT:" + doc.get("nextcnt").toString() + System.lineSeparator());
+                        txtCALC.append("ALL_DAYS=" + DAYS_ALL_CALC + System.lineSeparator());
+                        txtCALC.append("PRJ_CONSUME_D:" + PRJ_CONSUME_D + System.lineSeparator());
+                        txtCALC.append("PRJ_CONSUME_N:" + PRJ_CONSUME_N + System.lineSeparator());
+                        txtCALC.append("×ñÝùóç Ðáãßùí: (ôéìÞ çìÝñáò + íý÷ôáò) x óõíô. áíáãùãÞò çìåñþí: (4.8+2€) x (" + DAYS_ALL_CALC + "/120):" + round((4.8 + 2) * ((double) DAYS_ALL_CALC) / 120, 2) + System.lineSeparator());
+                        double KWHcost_D;
+                        double KWHcost_N;
+                        if (PRJ_CONSUME_D+PRJ_CONSUME_N > 2000) {
+                            KWHcost_D = 0.10252;
+                            KWHcost_N = 0.0661;
+                        }else{
+                            KWHcost_D = 0.0946;
+                            KWHcost_N = 0.0661;
+                        }
+
+                        double YKOcost_D=0;
+                        double YKOcost_N=0;
+
+                        if (PRJ_CONSUME_D+PRJ_CONSUME_N <= 1600) {
+                            YKOcost_D = 0.00699;
+                            YKOcost_N = 0.00889;
+                        }else if ((PRJ_CONSUME_D+PRJ_CONSUME_N >= 1601) && (PRJ_CONSUME_D+PRJ_CONSUME_N <=2000)) {
+                            YKOcost_D = 0.01570;
+                            YKOcost_N = 0.00889;
+                        }else if ((PRJ_CONSUME_D+PRJ_CONSUME_N >= 2001) && (PRJ_CONSUME_D+PRJ_CONSUME_N <=3000)) {
+                            YKOcost_D = 0.03987;
+                            YKOcost_N = 0.00889;
+                        }else if (PRJ_CONSUME_D+PRJ_CONSUME_N >= 3001) {
+                            YKOcost_D = 0.04488;
+                            YKOcost_N = 0.00889;
+                        }
+
+                        txtCALC.append("×ñÝùóç ÅíÝñãåéáò ÇìÝñáò ( kWh x ôéìÞ êáíïíéêÞò ÷ñÝùóçò ): " + round(((double) PRJ_CONSUME_D * KWHcost_D), 2)+ System.lineSeparator());
+                        txtCALC.append("×ñÝùóç ÅíÝñãåéáò Íý÷ôáò ( kWh x ôéìÞ ìåéùìÝíçò ÷ñÝùóçò íõ÷ôåñéíïý ): " + round(((double) PRJ_CONSUME_N * KWHcost_N), 2)+ System.lineSeparator());
+                        txtCALC.append("________________________________________"+ System.lineSeparator());
+                        double XREOSI_PROMITHEIAS_REUMATOS =  round( (4.8 + 2) * ((double) DAYS_ALL_CALC) / 120,2) +
+                                round( ((double)PRJ_CONSUME_D*KWHcost_D),2 ) +
+                                round( ((double)PRJ_CONSUME_N*KWHcost_N),2 );
+                        txtCALC.append("×ÑÅÙÓÇ ÐÑÏÌÇÈÅÉÁÓ ÑÅÕÌÁÔÏÓ: " + XREOSI_PROMITHEIAS_REUMATOS + System.lineSeparator());
+                        txtCALC.append("________________________________________" + System.lineSeparator());
+                        txtCALC.append("Óýóôçìá ÌåôáöïñÜò       :" + (
+                                round((0.16 * 25 * ((double) DAYS_ALL_CALC) / 365), 2)
+                                        + round((((double) PRJ_CONSUME_D) * 0.00563), 2)
+                        )
+                                + System.lineSeparator());
+                        txtCALC.append("Äßêôõï ÄéáíïìÞò         :" + (
+                                round((0.56 * 25 * ((double) DAYS_ALL_CALC) / 365), 2)
+                                        + round((((double) PRJ_CONSUME_D) * 0.0214), 2)
+                        )
+                                + System.lineSeparator());
+                        txtCALC.append("ÕÊÙ                     :" + (
+                                round((((double) PRJ_CONSUME_D) * YKOcost_D), 2)
+                                        + round((((double) PRJ_CONSUME_N) * YKOcost_N), 2)
+                        )
+                                + System.lineSeparator());
+                        txtCALC.append("ÅÔÌÅÁÑ                  :" + round((((double)(PRJ_CONSUME_D+PRJ_CONSUME_N))*0.02630),2) + System.lineSeparator());
+                        txtCALC.append("ËïéðÝò ×ñåþóåéò         :" + round((((double) (PRJ_CONSUME_D + PRJ_CONSUME_N)) * 0.00046), 2) + System.lineSeparator());
+                        txtCALC.append("________________________________________" + System.lineSeparator());
+                        double RYTHIMIZOMENES_XREOSEIS = round((0.16 * 25 * ((double)DAYS_ALL_CALC)/365),2)
+                                +round((((double)PRJ_CONSUME_D)*0.00563),2)
+                                +round((0.56 * 25 * ((double)DAYS_ALL_CALC)/365),2)
+                                +round((((double)PRJ_CONSUME_D)*0.0214),2)
+                                +round((((double)PRJ_CONSUME_D)*YKOcost_D),2)
+                                +round((((double)PRJ_CONSUME_N)*YKOcost_N),2)
+                                +round((((double)(PRJ_CONSUME_D+PRJ_CONSUME_N))*0.02630),2)
+                                +round((((double)(PRJ_CONSUME_D+PRJ_CONSUME_N))*0.00046),2);
+                        txtCALC.append("ÑÕÈÌÉÆÏÌÅÍÅÓ ×ÑÅÙÓÅÉÓ: " + RYTHIMIZOMENES_XREOSEIS + System.lineSeparator());
+                        txtCALC.append("________________________________________" + System.lineSeparator());
+                        txtCALC.append("ÅÉÄÉÊÏÓ ÖÏÑÏÓ ÊÁÔÁÍÁËÙÓÇÓ (ÅÖÊ):" + round((((double) (PRJ_CONSUME_D + PRJ_CONSUME_N)) * 0.0022), 2) + System.lineSeparator());
+                        double EID_TELOS = round((RYTHIMIZOMENES_XREOSEIS
+                                +XREOSI_PROMITHEIAS_REUMATOS
+                                + round((((double)(PRJ_CONSUME_D+PRJ_CONSUME_N))*0.0022),2)
+                                - round((((double)(PRJ_CONSUME_D+PRJ_CONSUME_N))*0.02630),2))
+                                *(0.005),2);
+                        txtCALC.append("ÅÉÄÉÊÏ ÔÅËÏÓ 5‰: (Áîßá Çëåêôñ. Ñåýìáôïò - ÅÔÌÅÁÑ + ÅÖÊ) x 5‰:" + EID_TELOS + System.lineSeparator());
+                        double FPA = round((RYTHIMIZOMENES_XREOSEIS+XREOSI_PROMITHEIAS_REUMATOS+ round((((double)(PRJ_CONSUME_D+PRJ_CONSUME_N))*0.0022),2))*0.13,2);
+                        txtCALC.append("ÖÐÁ (ÖÐÁ):" + FPA + System.lineSeparator());
+                        txtCALC.append("________________________________________" + System.lineSeparator());
+                        txtCALC.append("ÓÕÍÏËÏ ÁÎÉÁÓ ÇËÅÊÔÑÉÊÏÕ ÑÅÕÌÁÔÏÓ + ÅÖÊ + ÅÉÄÉÊÏ ÔÅËÏÓ 5‰ + ÖÐÁ:" + (RYTHIMIZOMENES_XREOSEIS + XREOSI_PROMITHEIAS_REUMATOS + round((((double) (PRJ_CONSUME_D + PRJ_CONSUME_N)) * 0.0022), 2) + EID_TELOS) + System.lineSeparator());
+                        txtCALC.append("________________________________________" + System.lineSeparator());
+                        String enanti = doc.get("enanti").toString();
+                        enanti = enanti.replace(',','.');
+                        double KOROPI = round(49,2);
+                        double EPOMENOS_LOGARIASMOS_JAVA = KOROPI+RYTHIMIZOMENES_XREOSEIS+XREOSI_PROMITHEIAS_REUMATOS+ round((((double)(PRJ_CONSUME_D+PRJ_CONSUME_N))*0.0022),2)+EID_TELOS +FPA - round(Double.parseDouble(enanti),2);
+                        double EPOMENOS_LOGARIASMOS_EXCEL = KOROPI + ((RYTHIMIZOMENES_XREOSEIS+XREOSI_PROMITHEIAS_REUMATOS- round(Double.parseDouble(enanti), 2))*1.13);
+                        txtCALC.append("ÅÐÏÌÅÍÏÓ ËÏÃÁÑÉÁÓÌÏÓ(JAVA):" + EPOMENOS_LOGARIASMOS_JAVA + System.lineSeparator());
+                        txtCALC.append("ÅÐÏÌÅÍÏÓ ËÏÃÁÑÉÁÓÌÏÓ(EXCEL):"+ EPOMENOS_LOGARIASMOS_EXCEL+ System.lineSeparator());
                     }else{
                         btnCalc.setEnabled(false);
+
                     }
                 } catch (Exception e){
-                    System.out.println(e.getMessage());
+                    System.err.println("ERR--> "+e.getMessage());
                 }
                 break;
             }
@@ -624,8 +798,7 @@ public class SvgParser {
     private static void putPPCinOracle(){
         Statement stmt = null;
         try {
-            Connection connection = DriverManager.getConnection(
-                    "jdbc:oracle:thin:@localhost:1521:XE", "HR", "HR");
+            Connection connection = DriverManager.getConnection("jdbc:oracle:thin:@localhost:1521:XE", "HR", "HR");
             stmt = connection.createStatement();
             String sqlText = "insert into ppc_clob (json) values ('" + JSON_OUTPUT + "')";
             System.out.println(sqlText);
@@ -639,6 +812,15 @@ public class SvgParser {
         } catch (SQLException e) {
             e.printStackTrace();
         }
+    }
+
+    public static double round(double value, int places) {
+        if (places < 0) throw new IllegalArgumentException();
+
+        long factor = (long) Math.pow(10, places);
+        value = value * factor;
+        long tmp = Math.round(value);
+        return (double) tmp / factor;
     }
 
 }
