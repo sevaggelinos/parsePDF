@@ -87,13 +87,14 @@ public class SvgParser {
     }
 
     private static void usage(){
-        System.out.println("arg[0]: .PDF filename or folder of PDF's or APP to open application arg[1]: INSERTDB to be inserted");
+        System.out.println("arg[0]: .PDF filename or folder of PDF's or APP to open application arg[1]: INSERTMONGO/INSERTORA to be inserted");
     }
 
     private static void pdfExtract(String[] args) throws IOException {
         pdfReadFields(args[0]);
-        if (args[1].toUpperCase().equals("INSERTDB")){
+        if (args[1].toUpperCase().equals("INSERTMONGO")) {
             putPPCinMongo();
+        } else if (args[1].toUpperCase().equals("INSERTORA")){
             putPPCinOracle();
         }
     }
@@ -343,7 +344,7 @@ public class SvgParser {
                     clpbrd.setContents(stringSelection, null);
                     txtExtract.setToolTipText("JSON Copied to Clipboard");
                     //putPPCinMongo();
-                    putPPCinOracle();
+                    //putPPCinOracle();
                 }
             }
             public void mousePressed(MouseEvent e) {}
